@@ -29,8 +29,15 @@ await cp(path.join(root, 'public'), distDir, { recursive: true });
 await cp(path.join(root, 'src', 'styles.css'), path.join(distDir, 'assets', 'styles.css'));
 await writeFile(path.join(distDir, '.nojekyll'), '');
 
+const mainJsPath = path.join(distDir, 'assets', 'main.js');
+let mainJs = await readFile(mainJsPath, 'utf8');
+mainJs = mainJs.replace(/import\s+['"]\.\/styles\.css['"];\r?\n?/, '');
+await writeFile(mainJsPath, mainJs);
+
 let html = await readFile(path.join(root, 'index.html'), 'utf8');
-html = html.replace('<script type="module" src="/src/main.tsx"></script>', '<script type="module" src="./assets/main.js"></script>');
+html = html
+  .replace('<link rel="icon" href="./favicon.svg" type="image/svg+xml" />', '<link rel="icon" href="./favicon.svg" type="image/svg+xml" />\n    <link rel="stylesheet" href="./assets/styles.css" />')
+  .replace('<script type="module" src="/src/main.tsx"></script>', '<script type="module" src="./assets/main.js"></script>');
 await writeFile(path.join(distDir, 'index.html'), html);
 
 await rm(buildDir, { recursive: true, force: true });
