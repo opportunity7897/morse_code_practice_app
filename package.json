@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -p tsconfig.json && vite build",
     "build:offline": "node scripts/build.mjs",
+    "deploy:pages": "node scripts/deploy-pages.mjs",
     "preview": "vite preview",
     "test:core": "node tests/morse-core.test.mjs"
   },
