@@ -1,0 +1,63 @@
+import type { Language } from '../storage/storage.js';
+
+type Dict = Record<string, string>;
+
+const JA: Dict = {
+  appTitle: 'Morse Path Trainer',
+  appSubtitle: '打鍵しながら経路で覚えるモールス信号',
+  learn: '学習', keying: '打鍵練習', listening: '聞き取り', free: '自由練習',
+  settings: '設定', close: '閉じる', language: '言語', theme: 'テーマ', system: 'システム', light: 'ライト', dark: 'ダーク',
+  wpm: '速度 (WPM)', frequency: 'サイドトーン周波数', volume: '音量', sound: 'サイドトーン', autoCommit: '自動で文字を確定',
+  includeNumbers: '数字 0–9 を含める', weakWeighting: '苦手文字を多めに出題', resetStats: '学習履歴をリセット', resetConfirm: '学習履歴を削除しますか？',
+  currentInput: '現在の入力', currentCandidate: '現在の候補', invalid: '未定義', pressKey: 'Space または下の電鍵を押してください',
+  dot: '短点', dash: '長点', commit: '確定', undo: '1つ戻す', clear: 'クリア', keyerHint: '短押し = ・ / 長押し = －',
+  directInput: '直接入力', keyboardHint: 'キーボード: Space / . / - / Enter / Backspace / Esc',
+  learnTitle: '文字を選んで経路を確認', learnHelp: 'ツリー上の経路を見ながら、同じ符号を打鍵してください。',
+  depth1: '1打', depth2: '2打', depth3: '3打', depth4: '4打', depth5: '数字', all: 'すべて', selectedCode: '符号', tryKeying: 'この文字を打ってみる',
+  keyingTitle: '表示された文字をモールスで入力', target: '問題', correct: '正解', incorrect: '不正解', expected: '正解は', next: '次へ',
+  listeningTitle: '音を聞いて文字を答える', play: '再生', replay: 'もう一度再生', chooseAnswer: '聞こえた文字を選択してください', typeAnswer: 'A–Z / 0–9 のキーでも回答できます',
+  freeTitle: '自由に打鍵して文字列へ変換', transcript: '変換結果', emptyTranscript: 'ここに変換結果が表示されます', backspaceTranscript: '最後の文字を削除',
+  stats: '成績', attempts: '回答', accuracy: '正答率', avgTime: '平均', weakChars: '苦手', noStats: 'まだ記録がありません',
+  treeLegend: '緑: 入力経路 / 青: 現在位置', start: 'START', candidateNone: '—',
+  autoCommitIn: '無入力で自動確定', ms: 'ms',
+  feedbackRight: '正解です', feedbackWrong: '違います',
+  listeningReady: '「再生」を押して開始',
+  nextDot: '次に ・', nextDash: '次に －',
+  modeHelpLearn: '符号の形とツリー上の位置を結び付けます。',
+  modeHelpKeying: '文字を見て、自分で電鍵を打ちます。',
+  modeHelpListening: 'サイドトーンだけを聞いて文字を特定します。',
+  modeHelpFree: '入力をリアルタイムにデコードします。',
+  localOnly: '学習履歴と設定はこのブラウザ内にのみ保存されます。'
+};
+
+const EN: Dict = {
+  appTitle: 'Morse Path Trainer',
+  appSubtitle: 'Learn Morse by following the path while you key',
+  learn: 'Learn', keying: 'Keying', listening: 'Listening', free: 'Free practice',
+  settings: 'Settings', close: 'Close', language: 'Language', theme: 'Theme', system: 'System', light: 'Light', dark: 'Dark',
+  wpm: 'Speed (WPM)', frequency: 'Sidetone frequency', volume: 'Volume', sound: 'Sidetone', autoCommit: 'Auto-commit characters',
+  includeNumbers: 'Include digits 0–9', weakWeighting: 'Prioritize weak characters', resetStats: 'Reset learning history', resetConfirm: 'Delete all learning history?',
+  currentInput: 'Current input', currentCandidate: 'Current candidate', invalid: 'Undefined', pressKey: 'Press Space or the key below',
+  dot: 'Dot', dash: 'Dash', commit: 'Commit', undo: 'Undo one', clear: 'Clear', keyerHint: 'Short press = dot / long press = dash',
+  directInput: 'Direct input', keyboardHint: 'Keyboard: Space / . / - / Enter / Backspace / Esc',
+  learnTitle: 'Choose a character and inspect its path', learnHelp: 'Follow the highlighted tree path, then key the same code yourself.',
+  depth1: '1 element', depth2: '2 elements', depth3: '3 elements', depth4: '4 elements', depth5: 'Digits', all: 'All', selectedCode: 'Code', tryKeying: 'Key this character',
+  keyingTitle: 'Key the displayed character in Morse', target: 'Target', correct: 'Correct', incorrect: 'Incorrect', expected: 'Expected', next: 'Next',
+  listeningTitle: 'Listen and identify the character', play: 'Play', replay: 'Replay', chooseAnswer: 'Choose the character you heard', typeAnswer: 'You can also answer with A–Z / 0–9 keys',
+  freeTitle: 'Key freely and decode to text', transcript: 'Transcript', emptyTranscript: 'Decoded text appears here', backspaceTranscript: 'Delete last character',
+  stats: 'Stats', attempts: 'Attempts', accuracy: 'Accuracy', avgTime: 'Average', weakChars: 'Weak', noStats: 'No results yet',
+  treeLegend: 'Green: input path / Blue: current node', start: 'START', candidateNone: '—',
+  autoCommitIn: 'Auto-commit after idle', ms: 'ms',
+  feedbackRight: 'Correct', feedbackWrong: 'Not quite',
+  listeningReady: 'Press “Play” to start',
+  nextDot: 'Next dot', nextDash: 'Next dash',
+  modeHelpLearn: 'Connect each code pattern with its position in the tree.',
+  modeHelpKeying: 'See a character and key its Morse code yourself.',
+  modeHelpListening: 'Identify a character from sidetone only.',
+  modeHelpFree: 'Decode your input in real time.',
+  localOnly: 'Learning history and settings stay in this browser only.'
+};
+
+export function t(language: Language, key: string): string {
+  return (language === 'ja' ? JA : EN)[key] ?? key;
+}

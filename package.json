@@ -1,0 +1,17 @@
+{
+  "name": "morse-path-trainer",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json && vite build",
+    "build:offline": "node scripts/build.mjs",
+    "preview": "vite preview",
+    "test:core": "node tests/morse-core.test.mjs"
+  },
+  "devDependencies": {
+    "vite": "8.2.2",
+    "typescript": "5.8.3"
+  }
+}
