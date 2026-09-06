@@ -134,19 +134,31 @@ main { width: min(1500px, 100%); margin: 0 auto; padding: 18px 22px 48px; }
 .tree-shell { overflow: hidden; }
 .tree-caption { height: 35px; display: flex; align-items: center; justify-content: space-between; padding: 0 13px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10px; }
 .tree-scroll { overflow-x: auto; scrollbar-width: thin; }
-.morse-tree { width: 100%; min-width: 690px; height: auto; display: block; padding: 12px 14px 2px; }
-.tree-connectors line { stroke: var(--border); stroke-width: 2.2; transition: stroke .15s, stroke-width .15s; }
-.tree-connectors line.edge-target { stroke: color-mix(in srgb, var(--primary) 42%, var(--border)); stroke-dasharray: 6 5; }
-.tree-connectors line.edge-active { stroke: var(--green); stroke-width: 5; }
-.tree-root { fill: var(--surface-2); stroke: var(--border); stroke-width: 2; }
-.tree-root-text { fill: var(--muted); font-size: 9px; font-weight: 700; }
-.tree-node circle { fill: var(--surface); stroke: var(--border); stroke-width: 2; transition: .15s ease; }
-.tree-node .node-char { fill: var(--text); font-size: 15px; font-weight: 700; }
-.tree-node .node-symbol { fill: var(--muted); font-size: 13px; font-weight: 700; }
-.tree-node.target circle { fill: var(--primary-soft); stroke: color-mix(in srgb, var(--primary) 50%, var(--border)); stroke-dasharray: 4 3; }
-.tree-node.active circle { fill: var(--green-soft); stroke: var(--green); stroke-width: 3; }
-.tree-node.current circle { fill: var(--primary); stroke: var(--primary); stroke-width: 4; filter: drop-shadow(0 1px 4px color-mix(in srgb, var(--primary) 40%, transparent)); }
-.tree-node.current .node-char { fill: var(--surface); }
+.morse-tree { width: 100%; min-width: 640px; height: auto; display: block; padding: 12px 14px 2px; }
+.plate-background { fill: #101418; stroke: #d7dde3; stroke-width: 3; }
+.plate-title { fill: #b8c4cc; font-size: 38px; font-weight: 500; letter-spacing: .08em; }
+.tree-connectors line { stroke: #9daab3; stroke-width: 6; stroke-linecap: round; transition: stroke .15s, stroke-width .15s; }
+.tree-connectors line.edge-target { stroke: #75a7f8; stroke-dasharray: 10 9; }
+.tree-connectors line.edge-active { stroke-width: 8; }
+.tree-connectors line.edge-active-dot { stroke: #26df73; }
+.tree-connectors line.edge-active-dash { stroke: #ff4b55; }
+.tree-transmitter line, .tree-transmitter path { fill: none; stroke: #b7c3cb; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.tree-transmitter circle { fill: #b7c3cb; }
+.tree-node .node-shape { fill: #162028; stroke: #b7c3cb; stroke-width: 5; transition: .15s ease; }
+.tree-node .node-label {
+  fill: #b8c4cc;
+  font-size: 25px;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: #101418;
+  stroke-linejoin: round;
+  stroke-width: 7px;
+}
+.tree-node.target .node-shape { fill: #173457; stroke: #8ab4f8; stroke-dasharray: 8 6; }
+.tree-node.dot-node.active .node-shape { fill: #24df70; stroke: #a7ffc7; stroke-width: 6; filter: drop-shadow(0 0 8px rgba(36,223,112,.72)); }
+.tree-node.dash-node.active .node-shape { fill: #ff4651; stroke: #ffc0c4; stroke-width: 6; filter: drop-shadow(0 0 8px rgba(255,70,81,.68)); }
+.tree-node.current .node-shape { stroke: #ffffff; stroke-width: 7; filter: drop-shadow(0 0 10px rgba(138,180,248,.82)); }
+.tree-node.current .node-label { fill: #ffffff; }
 .candidate-strip { border-top: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1.4fr 1fr; min-height: 58px; }
 .candidate-strip > div { display: flex; align-items: center; justify-content: center; gap: 11px; }
 .candidate-strip span { color: var(--muted); font-size: 11px; }

@@ -12,9 +12,13 @@ function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: root,
     stdio: 'inherit',
-    shell: process.platform === 'win32',
+    shell: false,
     ...options,
   });
+  if (result.error) {
+    console.error(result.error.message);
+    process.exit(1);
+  }
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
@@ -22,8 +26,12 @@ function output(command, args) {
   const result = spawnSync(command, args, {
     cwd: root,
     encoding: 'utf8',
-    shell: process.platform === 'win32',
+    shell: false,
   });
+  if (result.error) {
+    console.error(result.error.message);
+    process.exit(1);
+  }
   if (result.status !== 0) process.exit(result.status ?? 1);
   return result.stdout.trim();
 }
@@ -41,8 +49,8 @@ async function copyDirectoryContents(source, destination) {
   }
 }
 
-run(npm, ['run', 'build:offline']);
-run(npm, ['run', 'test:core']);
+run(npm, ['run', 'build:offline'], { shell: process.platform === 'win32' });
+run(npm, ['run', 'test:core'], { shell: process.platform === 'win32' });
 
 const remote = output('git', ['config', '--get', 'remote.origin.url']);
 const temp = await mkdtemp(path.join(os.tmpdir(), 'morse-pages-'));
@@ -50,7 +58,7 @@ const temp = await mkdtemp(path.join(os.tmpdir(), 'morse-pages-'));
 let cloned = spawnSync('git', ['clone', '--branch', 'gh-pages', '--single-branch', remote, temp], {
   cwd: root,
   stdio: 'inherit',
-  shell: process.platform === 'win32',
+  shell: false,
 });
 
 if (cloned.status !== 0) {
@@ -66,7 +74,7 @@ run('git', ['add', '-A'], { cwd: temp });
 
 const diff = spawnSync('git', ['diff', '--cached', '--quiet'], {
   cwd: temp,
-  shell: process.platform === 'win32',
+  shell: false,
 });
 
 if (diff.status === 0) {
