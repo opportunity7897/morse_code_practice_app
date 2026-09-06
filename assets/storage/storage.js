@@ -6,6 +6,7 @@ export function defaultLanguage() {
 export function defaultSettings() {
     return {
         language: defaultLanguage(),
+        codeSet: 'latin',
         theme: 'system',
         wpm: 12,
         frequency: 650,
@@ -22,7 +23,10 @@ export function loadSettings() {
         const raw = localStorage.getItem(SETTINGS_KEY);
         if (!raw)
             return fallback;
-        return { ...fallback, ...JSON.parse(raw) };
+        const settings = { ...fallback, ...JSON.parse(raw) };
+        if (settings.codeSet !== 'latin' && settings.codeSet !== 'wabun')
+            settings.codeSet = fallback.codeSet;
+        return settings;
     }
     catch {
         return fallback;

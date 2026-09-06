@@ -1,4 +1,4 @@
-export const MORSE_TABLE = Object.freeze({
+export const LATIN_MORSE_TABLE = Object.freeze({
     A: '.-', B: '-...', C: '-.-.', D: '-..', E: '.', F: '..-.', G: '--.', H: '....',
     I: '..', J: '.---', K: '-.-', L: '.-..', M: '--', N: '-.', O: '---', P: '.--.',
     Q: '--.-', R: '.-.', S: '...', T: '-', U: '..-', V: '...-', W: '.--', X: '-..-',
@@ -6,22 +6,80 @@ export const MORSE_TABLE = Object.freeze({
     '0': '-----', '1': '.----', '2': '..---', '3': '...--', '4': '....-',
     '5': '.....', '6': '-....', '7': '--...', '8': '---..', '9': '----.'
 });
-const REVERSE_TABLE = Object.freeze(Object.fromEntries(Object.entries(MORSE_TABLE).map(([char, code]) => [code, char])));
-export function encode(char) {
-    return MORSE_TABLE[char.toUpperCase()];
+export const WABUN_MORSE_TABLE = Object.freeze({
+    イ: '.-', ロ: '.-.-', ハ: '-...', ニ: '-.-.', ホ: '-..', ヘ: '.', ト: '..-..',
+    チ: '..-.', リ: '--.', ヌ: '....', ル: '-.--.', ヲ: '.---', ワ: '-.-',
+    カ: '.-..', ヨ: '--', タ: '-.', レ: '---', ソ: '---.', ツ: '.--.',
+    ネ: '--.-', ナ: '.-.', ラ: '...', ム: '-', ウ: '..-', ヰ: '.-..-',
+    ノ: '..--', オ: '.-...', ク: '...-', ヤ: '.--', マ: '-..-', ケ: '-.--',
+    フ: '--..', コ: '----', エ: '-.---', テ: '.-.--', ア: '--.--',
+    サ: '-.-.-', キ: '-.-..', ユ: '-..--', メ: '-...-', ミ: '..-.-',
+    シ: '--.-.', ヱ: '.--..', ヒ: '--..-', モ: '-..-.', セ: '.---.',
+    ス: '---.-', ン: '.-.-.', '゛': '..', '゜': '..--.',
+    一: '.----', 二: '..---', 三: '...--', 四: '....-', 五: '.....',
+    六: '-....', 七: '--...', 八: '---..', 九: '----.', '〇': '-----',
+    'ー': '.--.-', '、': '.-.-.-', '」': '.-.-..', '（': '-.--.-', '）': '.-..-.'
+});
+export const MORSE_TABLE = LATIN_MORSE_TABLE;
+const TABLE_BY_CODE_SET = Object.freeze({
+    latin: LATIN_MORSE_TABLE,
+    wabun: WABUN_MORSE_TABLE
+});
+const REVERSE_TABLE_BY_CODE_SET = Object.freeze({
+    latin: reverseTable(LATIN_MORSE_TABLE),
+    wabun: reverseTable(WABUN_MORSE_TABLE)
+});
+const LATIN_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const LATIN_DIGITS = '0123456789'.split('');
+const WABUN_KANA = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲン'.split('');
+const WABUN_MARKS = ['゛', '゜'];
+const WABUN_DIGITS = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '〇'];
+const DIGIT_TO_WABUN = Object.freeze({
+    '1': '一', '2': '二', '3': '三', '4': '四', '5': '五',
+    '6': '六', '7': '七', '8': '八', '9': '九', '0': '〇'
+});
+function reverseTable(table) {
+    return Object.freeze(Object.fromEntries(Object.entries(table).map(([char, code]) => [code, char])));
 }
-export function decode(sequence) {
-    return REVERSE_TABLE[sequence];
+function tableFor(codeSet) {
+    return TABLE_BY_CODE_SET[codeSet];
 }
-export function isValidPrefix(sequence) {
+export function normalizeCharacter(char, codeSet = 'latin') {
+    const normalized = char.normalize('NFKC');
+    if (codeSet === 'latin')
+        return normalized.toUpperCase();
+    if (DIGIT_TO_WABUN[normalized])
+        return DIGIT_TO_WABUN[normalized];
+    if (normalized === 'ﾞ' || normalized === '゛' || normalized.includes('\u3099'))
+        return '゛';
+    if (normalized === 'ﾟ' || normalized === '゜' || normalized.includes('\u309A'))
+        return '゜';
+    if (normalized === '(')
+        return '（';
+    if (normalized === ')')
+        return '）';
+    const first = normalized[0] ?? '';
+    const codePoint = first.codePointAt(0);
+    if (codePoint !== undefined && codePoint >= 0x3041 && codePoint <= 0x3096) {
+        return String.fromCodePoint(codePoint + 0x60);
+    }
+    return first;
+}
+export function encode(char, codeSet = 'latin') {
+    return tableFor(codeSet)[normalizeCharacter(char, codeSet)];
+}
+export function decode(sequence, codeSet = 'latin') {
+    return REVERSE_TABLE_BY_CODE_SET[codeSet][sequence];
+}
+export function isValidPrefix(sequence, codeSet = 'latin') {
     if (!sequence)
         return true;
-    return Object.values(MORSE_TABLE).some(code => code.startsWith(sequence));
+    return Object.values(tableFor(codeSet)).some(code => code.startsWith(sequence));
 }
-export function nextCandidates(sequence) {
+export function nextCandidates(sequence, codeSet = 'latin') {
     return {
-        dot: decode(sequence + '.'),
-        dash: decode(sequence + '-')
+        dot: decode(sequence + '.', codeSet),
+        dash: decode(sequence + '-', codeSet)
     };
 }
 export function displaySequence(sequence) {
@@ -33,7 +91,7 @@ export function sequencePrefixes(sequence) {
         out.push(sequence.slice(0, i));
     return out;
 }
-export function buildTree(maxDepth) {
+export function buildTree(maxDepth, codeSet = 'latin') {
     const nodes = [];
     for (let depth = 1; depth <= maxDepth; depth += 1) {
         const count = 2 ** depth;
@@ -42,14 +100,22 @@ export function buildTree(maxDepth) {
             for (let bit = depth - 1; bit >= 0; bit -= 1) {
                 sequence += ((index >> bit) & 1) === 0 ? '.' : '-';
             }
-            nodes.push({ sequence, char: decode(sequence), depth, index });
+            nodes.push({ sequence, char: decode(sequence, codeSet), depth, index });
         }
     }
     return nodes;
 }
-export function learningPool(includeNumbers) {
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-    return includeNumbers ? [...letters, ...'0123456789'.split('')] : letters;
+export function learningPool(codeSetOrIncludeNumbers, includeNumbers = false) {
+    const codeSet = typeof codeSetOrIncludeNumbers === 'boolean' ? 'latin' : codeSetOrIncludeNumbers;
+    const numbers = typeof codeSetOrIncludeNumbers === 'boolean' ? codeSetOrIncludeNumbers : includeNumbers;
+    if (codeSet === 'wabun') {
+        return numbers ? [...WABUN_KANA, ...WABUN_MARKS, ...WABUN_DIGITS] : [...WABUN_KANA, ...WABUN_MARKS];
+    }
+    return numbers ? [...LATIN_LETTERS, ...LATIN_DIGITS] : [...LATIN_LETTERS];
+}
+export function maxCodeLength(codeSet, includeNumbers) {
+    return learningPool(codeSet, includeNumbers)
+        .reduce((max, char) => Math.max(max, encode(char, codeSet)?.length ?? 0), 0);
 }
 export function dotDurationMs(wpm) {
     return 1200 / Math.max(5, Math.min(60, wpm));

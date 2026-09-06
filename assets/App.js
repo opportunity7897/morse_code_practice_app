@@ -4,7 +4,7 @@ import { ModeTabs } from './components/ModeTabs.js';
 import { MorseTree } from './components/MorseTree.js';
 import { SettingsPanel } from './components/SettingsPanel.js';
 import { StatsPanel } from './components/StatsPanel.js';
-import { classifyPress, decode, displaySequence, dotDurationMs, encode, learningPool, randomFromPool } from './features/morse/morse-core.js';
+import { classifyPress, decode, displaySequence, dotDurationMs, encode, learningPool, maxCodeLength, normalizeCharacter, randomFromPool } from './features/morse/morse-core.js';
 import { t } from './i18n/i18n.js';
 import { loadSettings, loadStats, practiceWeight, recordAttempt, resetStats, saveSettings, saveStats } from './storage/storage.js';
 const audio = new AudioEngine();
@@ -27,12 +27,15 @@ export function App() {
     const questionStartedAt = React.useRef(performance.now());
     const commitTimer = React.useRef(null);
     const language = settings.language;
+    const codeSet = settings.codeSet;
+    const activePool = React.useMemo(() => learningPool(codeSet, settings.includeNumbers), [codeSet, settings.includeNumbers]);
+    const maxElements = React.useMemo(() => maxCodeLength(codeSet, settings.includeNumbers), [codeSet, settings.includeNumbers]);
     const dotMs = dotDurationMs(settings.wpm);
     const thresholdMs = dotMs * 2;
     const autoCommitMs = Math.max(360, dotMs * 3);
-    const candidate = decode(sequence);
-    const learnCode = encode(learnChar) ?? '';
-    const targetCode = encode(target) ?? '';
+    const candidate = decode(sequence, codeSet);
+    const learnCode = encode(learnChar, codeSet) ?? '';
+    const targetCode = encode(target, codeSet) ?? '';
     React.useEffect(() => {
         saveSettings(settings);
         document.documentElement.lang = settings.language;
@@ -95,9 +98,9 @@ export function App() {
                 setSettingsOpen(false);
                 return;
             }
-            if (mode === 'listening' && /^[a-zA-Z0-9]$/.test(event.key)) {
-                const answer = event.key.toUpperCase();
-                if (learningPool(settings.includeNumbers).includes(answer))
+            if (mode === 'listening') {
+                const answer = normalizeCharacter(event.key, codeSet);
+                if (activePool.includes(answer))
                     submitListening(answer);
             }
         };
@@ -119,12 +122,26 @@ export function App() {
         setFeedback(null);
         if (mode === 'keying' || mode === 'listening')
             newQuestion();
-    }, [mode, settings.includeNumbers]);
+    }, [mode, settings.includeNumbers, codeSet]);
+    React.useEffect(() => {
+        const fallback = activePool[0] ?? 'E';
+        if (!activePool.includes(learnChar)) {
+            setLearnChar(fallback);
+            setLearnDepth(encode(fallback, codeSet)?.length ?? 1);
+        }
+        else {
+            setLearnDepth(depth => Math.min(depth, Math.max(1, maxElements)));
+        }
+        if (!activePool.includes(target))
+            setTarget(fallback);
+        clearInput();
+        setFeedback(null);
+    }, [activePool, maxElements]);
     function setAndPersistSettings(next) {
         setSettings(next);
     }
     function appendSymbol(symbol) {
-        if (sequence.length >= 5)
+        if (sequence.length >= maxElements)
             return;
         setFeedback(null);
         setSequence(prev => prev + symbol);
@@ -157,7 +174,7 @@ export function App() {
         setPressDuration(duration);
         audio.stopTone();
         const symbol = classifyPress(duration, settings.wpm);
-        setSequence(prev => prev.length < 5 ? prev + symbol : prev);
+        setSequence(prev => prev.length < maxElements ? prev + symbol : prev);
     }
     function clearInput() {
         if (commitTimer.current)
@@ -172,7 +189,7 @@ export function App() {
     function commitSequence() {
         if (!sequence)
             return;
-        const answer = decode(sequence);
+        const answer = decode(sequence, codeSet);
         const elapsed = performance.now() - questionStartedAt.current;
         if (mode === 'free') {
             setTranscript(prev => prev + (answer ?? '·'));
@@ -196,7 +213,7 @@ export function App() {
         }
     }
     function newQuestion() {
-        const pool = learningPool(settings.includeNumbers);
+        const pool = activePool;
         const weights = settings.weakWeighting ? pool.map(char => practiceWeight(stats[char])) : undefined;
         let next = randomFromPool(pool, weights);
         if (pool.length > 1 && next === target)
@@ -208,7 +225,7 @@ export function App() {
         questionStartedAt.current = performance.now();
     }
     async function playListening() {
-        const code = encode(target);
+        const code = encode(target, codeSet);
         if (!code)
             return;
         setListeningPlayed(true);
@@ -231,7 +248,7 @@ export function App() {
         setFeedback(null);
         questionStartedAt.current = performance.now();
     }
-    const targetTreeSequence = mode === 'learn' ? learnCode : '';
+    const targetTreeSequence = mode === 'learn' ? learnCode : mode === 'keying' ? targetCode : '';
     return (React.createElement("div", { className: "app-shell" },
         React.createElement("header", { className: "topbar" },
             React.createElement("div", { className: "brand-mark", "aria-hidden": "true" },
@@ -245,10 +262,11 @@ export function App() {
                 React.createElement("button", { type: "button", className: "icon-button settings-button", onClick: () => setSettingsOpen(true), "aria-label": t(language, 'settings') }, "\u2699"))),
         React.createElement("main", null,
             React.createElement(ModeTabs, { mode: mode, language: language, onChange: setMode }),
+            React.createElement(CodeSetSwitch, { language: language, codeSet: codeSet, onChange: next => setAndPersistSettings({ ...settings, codeSet: next }) }),
             React.createElement("div", { className: "workspace" },
                 React.createElement("section", { className: "primary-column" },
                     React.createElement(ModeHeader, { mode: mode, language: language, target: target, feedback: feedback, listeningPlayed: listeningPlayed, onPlayListening: () => void playListening() }),
-                    mode === 'learn' && (React.createElement(LearnSelector, { language: language, selectedDepth: learnDepth, onDepth: setLearnDepth, selectedChar: learnChar, onChar: chooseLearnChar, includeNumbers: settings.includeNumbers })),
+                    mode === 'learn' && (React.createElement(LearnSelector, { language: language, selectedDepth: learnDepth, onDepth: setLearnDepth, selectedChar: learnChar, onChar: chooseLearnChar, codeSet: codeSet, includeNumbers: settings.includeNumbers })),
                     React.createElement("div", { className: "input-summary" },
                         React.createElement("div", null,
                             React.createElement("span", null, t(language, 'currentInput')),
@@ -262,8 +280,8 @@ export function App() {
                                 Math.round(autoCommitMs),
                                 " ",
                                 t(language, 'ms')))),
-                    React.createElement(MorseTree, { sequence: sequence, targetSequence: targetTreeSequence, showNumbers: settings.includeNumbers, language: language }),
-                    mode === 'listening' ? (React.createElement(ListeningAnswers, { language: language, includeNumbers: settings.includeNumbers, enabled: listeningPlayed, onAnswer: submitListening })) : (React.createElement(Keyer, { language: language, pressed: pressed, pressDuration: pressDuration, thresholdMs: thresholdMs, onPressStart: beginPress, onPressEnd: endPress, onDot: () => appendSymbol('.'), onDash: () => appendSymbol('-'), onCommit: commitSequence, onUndo: undoSymbol, onClear: clearInput })),
+                    React.createElement(MorseTree, { sequence: sequence, targetSequence: targetTreeSequence, showNumbers: settings.includeNumbers, codeSet: codeSet, language: language }),
+                    mode === 'listening' ? (React.createElement(ListeningAnswers, { language: language, codeSet: codeSet, includeNumbers: settings.includeNumbers, enabled: listeningPlayed, onAnswer: submitListening })) : (React.createElement(Keyer, { language: language, pressed: pressed, pressDuration: pressDuration, thresholdMs: thresholdMs, onPressStart: beginPress, onPressEnd: endPress, onDot: () => appendSymbol('.'), onDash: () => appendSymbol('-'), onCommit: commitSequence, onUndo: undoSymbol, onClear: clearInput })),
                     mode === 'free' && (React.createElement("section", { className: "transcript-card" },
                         React.createElement("div", { className: "transcript-heading" },
                             React.createElement("span", null, t(language, 'transcript')),
@@ -273,8 +291,13 @@ export function App() {
                         React.createElement("div", { className: `transcript ${transcript ? '' : 'empty'}` }, transcript || t(language, 'emptyTranscript'))))),
                 React.createElement("div", { className: "secondary-column" },
                     React.createElement(StatsPanel, { stats: stats, language: language }),
-                    React.createElement(QuickReference, { language: language, includeNumbers: settings.includeNumbers })))),
+                    React.createElement(QuickReference, { language: language, codeSet: codeSet, includeNumbers: settings.includeNumbers })))),
         React.createElement(SettingsPanel, { open: settingsOpen, settings: settings, onChange: setAndPersistSettings, onClose: () => setSettingsOpen(false), onResetStats: () => { resetStats(); setStats({}); } })));
+}
+function CodeSetSwitch({ language, codeSet, onChange }) {
+    return (React.createElement("div", { className: "code-set-bar" },
+        React.createElement("span", null, t(language, 'codeSet')),
+        React.createElement("div", { className: "segmented", role: "group", "aria-label": t(language, 'codeSet') }, ['latin', 'wabun'].map(item => (React.createElement("button", { type: "button", key: item, className: codeSet === item ? 'active' : '', onClick: () => onChange(item) }, t(language, `codeSet${item}`)))))));
 }
 function ModeHeader({ mode, language, target, feedback, listeningPlayed, onPlayListening }) {
     if (mode === 'learn')
@@ -312,33 +335,32 @@ function Feedback({ feedback, language, target }) {
         return null;
     return React.createElement("div", { className: `feedback-chip ${feedback}` }, feedback === 'right' ? `✓ ${t(language, 'feedbackRight')}` : `× ${t(language, 'feedbackWrong')} · ${t(language, 'expected')} ${target}`);
 }
-function LearnSelector({ language, selectedDepth, onDepth, selectedChar, onChar, includeNumbers }) {
-    const depths = includeNumbers ? [1, 2, 3, 4, 5] : [1, 2, 3, 4];
-    const chars = learningPool(includeNumbers).filter(char => encode(char)?.length === selectedDepth);
+function LearnSelector({ language, selectedDepth, onDepth, selectedChar, onChar, codeSet, includeNumbers }) {
+    const depths = Array.from({ length: maxCodeLength(codeSet, includeNumbers) }, (_, index) => index + 1);
+    const chars = learningPool(codeSet, includeNumbers).filter(char => encode(char, codeSet)?.length === selectedDepth);
     return (React.createElement("section", { className: "learn-selector" },
-        React.createElement("div", { className: "depth-tabs" }, depths.map(depth => React.createElement("button", { type: "button", key: depth, className: selectedDepth === depth ? 'active' : '', onClick: () => onDepth(depth) }, t(language, depth === 5 ? 'depth5' : `depth${depth}`)))),
+        React.createElement("div", { className: "depth-tabs" }, depths.map(depth => React.createElement("button", { type: "button", key: depth, className: selectedDepth === depth ? 'active' : '', onClick: () => onDepth(depth) }, t(language, `depth${depth}`)))),
         React.createElement("div", { className: "char-grid compact" }, chars.map(char => React.createElement("button", { type: "button", key: char, className: selectedChar === char ? 'active' : '', onClick: () => onChar(char) },
             React.createElement("strong", null, char),
-            React.createElement("span", null, displaySequence(encode(char) ?? ''))))),
+            React.createElement("span", null, displaySequence(encode(char, codeSet) ?? ''))))),
         React.createElement("div", { className: "learn-selected" },
             React.createElement("span", null, t(language, 'selectedCode')),
             React.createElement("strong", null, selectedChar),
-            React.createElement("code", null, displaySequence(encode(selectedChar) ?? '')),
+            React.createElement("code", null, displaySequence(encode(selectedChar, codeSet) ?? '')),
             React.createElement("small", null, t(language, 'tryKeying')))));
 }
-function ListeningAnswers({ language, includeNumbers, enabled, onAnswer }) {
+function ListeningAnswers({ language, codeSet, includeNumbers, enabled, onAnswer }) {
     return (React.createElement("section", { className: `listening-answers ${enabled ? '' : 'disabled'}` },
-        React.createElement("div", { className: "listening-hint" }, t(language, 'typeAnswer')),
-        React.createElement("div", { className: "char-grid answer-grid" }, learningPool(includeNumbers).map(char => React.createElement("button", { type: "button", key: char, disabled: !enabled, onClick: () => onAnswer(char) }, char)))));
+        React.createElement("div", { className: "listening-hint" }, t(language, codeSet === 'latin' ? 'typeAnswerLatin' : 'typeAnswerWabun')),
+        React.createElement("div", { className: "char-grid answer-grid" }, learningPool(codeSet, includeNumbers).map(char => React.createElement("button", { type: "button", key: char, disabled: !enabled, onClick: () => onAnswer(char) }, char)))));
 }
-function QuickReference({ language, includeNumbers }) {
-    const pool = learningPool(includeNumbers);
+function QuickReference({ language, codeSet, includeNumbers }) {
+    const pool = learningPool(codeSet, includeNumbers);
+    const title = codeSet === 'wabun' ? t(language, 'referenceWabun') : t(language, includeNumbers ? 'referenceLatinNumbers' : 'referenceLatin');
     return (React.createElement("aside", { className: "reference-panel" },
-        React.createElement("div", { className: "section-kicker" },
-            "Morse A\u2013Z",
-            includeNumbers ? ' / 0–9' : ''),
+        React.createElement("div", { className: "section-kicker" }, title),
         React.createElement("div", { className: "reference-grid" }, pool.map(char => React.createElement("div", { key: char },
             React.createElement("strong", null, char),
-            React.createElement("code", null, displaySequence(encode(char) ?? '')))))));
+            React.createElement("code", null, displaySequence(encode(char, codeSet) ?? '')))))));
 }
 //# sourceMappingURL=App.js.map
