@@ -1,4 +1,5 @@
 import type { Language, Settings, ThemeSetting } from '../storage/storage.js';
+import type { CodeSet } from '../features/morse/morse-core.js';
 import { t } from '../i18n/i18n.js';
 
 interface Props {
@@ -26,6 +27,14 @@ export function SettingsPanel({ open, settings, onChange, onClose, onResetStats 
           <div className="segmented">
             {(['ja', 'en'] as Language[]).map(item => (
               <button type="button" key={item} className={settings.language === item ? 'active' : ''} onClick={() => update('language', item)}>{item === 'ja' ? '日本語' : 'English'}</button>
+            ))}
+          </div>
+        </div>
+        <div className="setting-row">
+          <label>{t(language, 'codeSet')}</label>
+          <div className="segmented">
+            {(['latin', 'wabun'] as CodeSet[]).map(item => (
+              <button type="button" key={item} className={settings.codeSet === item ? 'active' : ''} onClick={() => update('codeSet', item)}>{t(language, `codeSet${item}`)}</button>
             ))}
           </div>
         </div>

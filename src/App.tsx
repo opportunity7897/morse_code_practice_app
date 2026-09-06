@@ -5,7 +5,8 @@ import { MorseTree } from './components/MorseTree.js';
 import { SettingsPanel } from './components/SettingsPanel.js';
 import { StatsPanel } from './components/StatsPanel.js';
 import {
-  classifyPress, decode, displaySequence, dotDurationMs, encode, learningPool, randomFromPool
+  classifyPress, decode, displaySequence, dotDurationMs, encode, learningPool,
+  maxCodeLength, normalizeCharacter, randomFromPool, type CodeSet
 } from './features/morse/morse-core.js';
 import { t } from './i18n/i18n.js';
 import {
@@ -36,12 +37,15 @@ export function App() {
   const commitTimer = React.useRef<number | null>(null);
 
   const language = settings.language;
+  const codeSet = settings.codeSet;
+  const activePool = React.useMemo(() => learningPool(codeSet, settings.includeNumbers), [codeSet, settings.includeNumbers]);
+  const maxElements = React.useMemo(() => maxCodeLength(codeSet, settings.includeNumbers), [codeSet, settings.includeNumbers]);
   const dotMs = dotDurationMs(settings.wpm);
   const thresholdMs = dotMs * 2;
   const autoCommitMs = Math.max(360, dotMs * 3);
-  const candidate = decode(sequence);
-  const learnCode = encode(learnChar) ?? '';
-  const targetCode = encode(target) ?? '';
+  const candidate = decode(sequence, codeSet);
+  const learnCode = encode(learnChar, codeSet) ?? '';
+  const targetCode = encode(target, codeSet) ?? '';
 
   React.useEffect(() => {
     saveSettings(settings);
@@ -83,9 +87,9 @@ export function App() {
       }
       if (event.key === 'Backspace' && mode !== 'listening') { event.preventDefault(); undoSymbol(); return; }
       if (event.key === 'Escape') { event.preventDefault(); clearInput(); setSettingsOpen(false); return; }
-      if (mode === 'listening' && /^[a-zA-Z0-9]$/.test(event.key)) {
-        const answer = event.key.toUpperCase();
-        if (learningPool(settings.includeNumbers).includes(answer)) submitListening(answer);
+      if (mode === 'listening') {
+        const answer = normalizeCharacter(event.key, codeSet);
+        if (activePool.includes(answer)) submitListening(answer);
       }
     };
     const onKeyUp = (event: KeyboardEvent) => {
@@ -106,14 +110,27 @@ export function App() {
     clearInput();
     setFeedback(null);
     if (mode === 'keying' || mode === 'listening') newQuestion();
-  }, [mode, settings.includeNumbers]);
+  }, [mode, settings.includeNumbers, codeSet]);
+
+  React.useEffect(() => {
+    const fallback = activePool[0] ?? 'E';
+    if (!activePool.includes(learnChar)) {
+      setLearnChar(fallback);
+      setLearnDepth(encode(fallback, codeSet)?.length ?? 1);
+    } else {
+      setLearnDepth(depth => Math.min(depth, Math.max(1, maxElements)));
+    }
+    if (!activePool.includes(target)) setTarget(fallback);
+    clearInput();
+    setFeedback(null);
+  }, [activePool, maxElements]);
 
   function setAndPersistSettings(next: Settings) {
     setSettings(next);
   }
 
   function appendSymbol(symbol: '.' | '-') {
-    if (sequence.length >= 5) return;
+    if (sequence.length >= maxElements) return;
     setFeedback(null);
     setSequence(prev => prev + symbol);
     if (settings.soundEnabled) void audio.playElement(symbol, settings.wpm, settings.frequency, settings.volume);
@@ -141,7 +158,7 @@ export function App() {
     setPressDuration(duration);
     audio.stopTone();
     const symbol = classifyPress(duration, settings.wpm);
-    setSequence(prev => prev.length < 5 ? prev + symbol : prev);
+    setSequence(prev => prev.length < maxElements ? prev + symbol : prev);
   }
 
   function clearInput() {
@@ -157,7 +174,7 @@ export function App() {
 
   function commitSequence() {
     if (!sequence) return;
-    const answer = decode(sequence);
+    const answer = decode(sequence, codeSet);
     const elapsed = performance.now() - questionStartedAt.current;
 
     if (mode === 'free') {
@@ -185,7 +202,7 @@ export function App() {
   }
 
   function newQuestion() {
-    const pool = learningPool(settings.includeNumbers);
+    const pool = activePool;
     const weights = settings.weakWeighting ? pool.map(char => practiceWeight(stats[char])) : undefined;
     let next = randomFromPool(pool, weights);
     if (pool.length > 1 && next === target) next = randomFromPool(pool, weights);
@@ -197,7 +214,7 @@ export function App() {
   }
 
   async function playListening() {
-    const code = encode(target);
+    const code = encode(target, codeSet);
     if (!code) return;
     setListeningPlayed(true);
     questionStartedAt.current = performance.now();
@@ -220,7 +237,7 @@ export function App() {
     questionStartedAt.current = performance.now();
   }
 
-  const targetTreeSequence = mode === 'learn' ? learnCode : '';
+  const targetTreeSequence = mode === 'learn' ? learnCode : mode === 'keying' ? targetCode : '';
 
   return (
     <div className="app-shell">
@@ -238,6 +255,11 @@ export function App() {
 
       <main>
         <ModeTabs mode={mode} language={language} onChange={setMode} />
+        <CodeSetSwitch
+          language={language}
+          codeSet={codeSet}
+          onChange={next => setAndPersistSettings({ ...settings, codeSet: next })}
+        />
         <div className="workspace">
           <section className="primary-column">
             <ModeHeader mode={mode} language={language} target={target} feedback={feedback} listeningPlayed={listeningPlayed} onPlayListening={() => void playListening()} />
@@ -249,6 +271,7 @@ export function App() {
                 onDepth={setLearnDepth}
                 selectedChar={learnChar}
                 onChar={chooseLearnChar}
+                codeSet={codeSet}
                 includeNumbers={settings.includeNumbers}
               />
             )}
@@ -265,10 +288,10 @@ export function App() {
               {settings.autoCommit && mode !== 'listening' && <div className="commit-indicator"><span>{t(language, 'autoCommitIn')}</span><strong>{Math.round(autoCommitMs)} {t(language, 'ms')}</strong></div>}
             </div>
 
-            <MorseTree sequence={sequence} targetSequence={targetTreeSequence} showNumbers={settings.includeNumbers} language={language} />
+            <MorseTree sequence={sequence} targetSequence={targetTreeSequence} showNumbers={settings.includeNumbers} codeSet={codeSet} language={language} />
 
             {mode === 'listening' ? (
-              <ListeningAnswers language={language} includeNumbers={settings.includeNumbers} enabled={listeningPlayed} onAnswer={submitListening} />
+              <ListeningAnswers language={language} codeSet={codeSet} includeNumbers={settings.includeNumbers} enabled={listeningPlayed} onAnswer={submitListening} />
             ) : (
               <Keyer
                 language={language}
@@ -295,7 +318,7 @@ export function App() {
 
           <div className="secondary-column">
             <StatsPanel stats={stats} language={language} />
-            <QuickReference language={language} includeNumbers={settings.includeNumbers} />
+            <QuickReference language={language} codeSet={codeSet} includeNumbers={settings.includeNumbers} />
           </div>
         </div>
       </main>
@@ -307,6 +330,19 @@ export function App() {
         onClose={() => setSettingsOpen(false)}
         onResetStats={() => { resetStats(); setStats({}); }}
       />
+    </div>
+  );
+}
+
+function CodeSetSwitch({ language, codeSet, onChange }: { language: Settings['language']; codeSet: CodeSet; onChange: (codeSet: CodeSet) => void }) {
+  return (
+    <div className="code-set-bar">
+      <span>{t(language, 'codeSet')}</span>
+      <div className="segmented" role="group" aria-label={t(language, 'codeSet')}>
+        {(['latin', 'wabun'] as CodeSet[]).map(item => (
+          <button type="button" key={item} className={codeSet === item ? 'active' : ''} onClick={() => onChange(item)}>{t(language, `codeSet${item}`)}</button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -325,42 +361,43 @@ function Feedback({ feedback, language, target }: { feedback: 'right' | 'wrong' 
   return <div className={`feedback-chip ${feedback}`}>{feedback === 'right' ? `✓ ${t(language, 'feedbackRight')}` : `× ${t(language, 'feedbackWrong')} · ${t(language, 'expected')} ${target}`}</div>;
 }
 
-function LearnSelector({ language, selectedDepth, onDepth, selectedChar, onChar, includeNumbers }: {
-  language: Settings['language']; selectedDepth: number; onDepth: (depth: number) => void; selectedChar: string; onChar: (char: string) => void; includeNumbers: boolean;
+function LearnSelector({ language, selectedDepth, onDepth, selectedChar, onChar, codeSet, includeNumbers }: {
+  language: Settings['language']; selectedDepth: number; onDepth: (depth: number) => void; selectedChar: string; onChar: (char: string) => void; codeSet: CodeSet; includeNumbers: boolean;
 }) {
-  const depths = includeNumbers ? [1, 2, 3, 4, 5] : [1, 2, 3, 4];
-  const chars = learningPool(includeNumbers).filter(char => encode(char)?.length === selectedDepth);
+  const depths = Array.from({ length: maxCodeLength(codeSet, includeNumbers) }, (_, index) => index + 1);
+  const chars = learningPool(codeSet, includeNumbers).filter(char => encode(char, codeSet)?.length === selectedDepth);
   return (
     <section className="learn-selector">
       <div className="depth-tabs">
-        {depths.map(depth => <button type="button" key={depth} className={selectedDepth === depth ? 'active' : ''} onClick={() => onDepth(depth)}>{t(language, depth === 5 ? 'depth5' : `depth${depth}`)}</button>)}
+        {depths.map(depth => <button type="button" key={depth} className={selectedDepth === depth ? 'active' : ''} onClick={() => onDepth(depth)}>{t(language, `depth${depth}`)}</button>)}
       </div>
       <div className="char-grid compact">
-        {chars.map(char => <button type="button" key={char} className={selectedChar === char ? 'active' : ''} onClick={() => onChar(char)}><strong>{char}</strong><span>{displaySequence(encode(char) ?? '')}</span></button>)}
+        {chars.map(char => <button type="button" key={char} className={selectedChar === char ? 'active' : ''} onClick={() => onChar(char)}><strong>{char}</strong><span>{displaySequence(encode(char, codeSet) ?? '')}</span></button>)}
       </div>
-      <div className="learn-selected"><span>{t(language, 'selectedCode')}</span><strong>{selectedChar}</strong><code>{displaySequence(encode(selectedChar) ?? '')}</code><small>{t(language, 'tryKeying')}</small></div>
+      <div className="learn-selected"><span>{t(language, 'selectedCode')}</span><strong>{selectedChar}</strong><code>{displaySequence(encode(selectedChar, codeSet) ?? '')}</code><small>{t(language, 'tryKeying')}</small></div>
     </section>
   );
 }
 
-function ListeningAnswers({ language, includeNumbers, enabled, onAnswer }: { language: Settings['language']; includeNumbers: boolean; enabled: boolean; onAnswer: (char: string) => void }) {
+function ListeningAnswers({ language, codeSet, includeNumbers, enabled, onAnswer }: { language: Settings['language']; codeSet: CodeSet; includeNumbers: boolean; enabled: boolean; onAnswer: (char: string) => void }) {
   return (
     <section className={`listening-answers ${enabled ? '' : 'disabled'}`}>
-      <div className="listening-hint">{t(language, 'typeAnswer')}</div>
+      <div className="listening-hint">{t(language, codeSet === 'latin' ? 'typeAnswerLatin' : 'typeAnswerWabun')}</div>
       <div className="char-grid answer-grid">
-        {learningPool(includeNumbers).map(char => <button type="button" key={char} disabled={!enabled} onClick={() => onAnswer(char)}>{char}</button>)}
+        {learningPool(codeSet, includeNumbers).map(char => <button type="button" key={char} disabled={!enabled} onClick={() => onAnswer(char)}>{char}</button>)}
       </div>
     </section>
   );
 }
 
-function QuickReference({ language, includeNumbers }: { language: Settings['language']; includeNumbers: boolean }) {
-  const pool = learningPool(includeNumbers);
+function QuickReference({ language, codeSet, includeNumbers }: { language: Settings['language']; codeSet: CodeSet; includeNumbers: boolean }) {
+  const pool = learningPool(codeSet, includeNumbers);
+  const title = codeSet === 'wabun' ? t(language, 'referenceWabun') : t(language, includeNumbers ? 'referenceLatinNumbers' : 'referenceLatin');
   return (
     <aside className="reference-panel">
-      <div className="section-kicker">Morse A–Z{includeNumbers ? ' / 0–9' : ''}</div>
+      <div className="section-kicker">{title}</div>
       <div className="reference-grid">
-        {pool.map(char => <div key={char}><strong>{char}</strong><code>{displaySequence(encode(char) ?? '')}</code></div>)}
+        {pool.map(char => <div key={char}><strong>{char}</strong><code>{displaySequence(encode(char, codeSet) ?? '')}</code></div>)}
       </div>
     </aside>
   );

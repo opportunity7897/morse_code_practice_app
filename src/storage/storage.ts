@@ -1,8 +1,11 @@
+import type { CodeSet } from '../features/morse/morse-core.js';
+
 export type Language = 'ja' | 'en';
 export type ThemeSetting = 'system' | 'light' | 'dark';
 
 export interface Settings {
   language: Language;
+  codeSet: CodeSet;
   theme: ThemeSetting;
   wpm: number;
   frequency: number;
@@ -32,6 +35,7 @@ export function defaultLanguage(): Language {
 export function defaultSettings(): Settings {
   return {
     language: defaultLanguage(),
+    codeSet: 'latin',
     theme: 'system',
     wpm: 12,
     frequency: 650,
@@ -48,7 +52,9 @@ export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return fallback;
-    return { ...fallback, ...JSON.parse(raw) } as Settings;
+    const settings = { ...fallback, ...JSON.parse(raw) } as Settings;
+    if (settings.codeSet !== 'latin' && settings.codeSet !== 'wabun') settings.codeSet = fallback.codeSet;
+    return settings;
   } catch {
     return fallback;
   }
