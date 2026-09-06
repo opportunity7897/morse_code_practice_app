@@ -1,54 +1,78 @@
-import { buildTree, decode, sequencePrefixes } from '../features/morse/morse-core.js';
+import { decode, sequencePrefixes } from '../features/morse/morse-core.js';
 import { t } from '../i18n/i18n.js';
-const WIDTH = 1120;
-const ROOT_Y = 50;
-const LEVEL_GAP = 102;
-function nodePoint(sequence) {
-    const depth = sequence.length;
-    let index = 0;
-    for (const symbol of sequence)
-        index = index * 2 + (symbol === '-' ? 1 : 0);
-    const count = 2 ** depth;
-    return {
-        x: ((index + 0.5) / count) * WIDTH,
-        y: ROOT_Y + depth * LEVEL_GAP
-    };
+const WIDTH = 760;
+const HEIGHT = 540;
+const ROOT = { x: 380, y: 116 };
+const PLATE_NODES = [
+    { sequence: '---', char: 'O', kind: 'dash', x: 120, y: 116, labelX: 120, labelY: 82 },
+    { sequence: '--', char: 'M', kind: 'dash', x: 220, y: 116, labelX: 220, labelY: 82 },
+    { sequence: '-', char: 'T', kind: 'dash', x: 320, y: 116, labelX: 320, labelY: 82 },
+    { sequence: '.', char: 'E', kind: 'dot', x: 430, y: 116, labelX: 430, labelY: 82 },
+    { sequence: '..', char: 'I', kind: 'dot', x: 500, y: 116, labelX: 500, labelY: 82 },
+    { sequence: '...', char: 'S', kind: 'dot', x: 570, y: 116, labelX: 570, labelY: 82 },
+    { sequence: '....', char: 'H', kind: 'dot', x: 640, y: 116, labelX: 640, labelY: 82 },
+    { sequence: '--.', char: 'G', kind: 'dot', x: 220, y: 188, labelX: 252, labelY: 197, labelAnchor: 'start' },
+    { sequence: '--.-', char: 'Q', kind: 'dash', x: 120, y: 188, labelX: 120, labelY: 228 },
+    { sequence: '--..', char: 'Z', kind: 'dot', x: 220, y: 260, labelX: 252, labelY: 269, labelAnchor: 'start' },
+    { sequence: '-.', char: 'N', kind: 'dot', x: 320, y: 332, labelX: 352, labelY: 341, labelAnchor: 'start' },
+    { sequence: '-.-', char: 'K', kind: 'dash', x: 220, y: 332, labelX: 220, labelY: 298 },
+    { sequence: '-.--', char: 'Y', kind: 'dash', x: 120, y: 332, labelX: 120, labelY: 298 },
+    { sequence: '-.-.', char: 'C', kind: 'dot', x: 220, y: 404, labelX: 252, labelY: 413, labelAnchor: 'start' },
+    { sequence: '-..', char: 'D', kind: 'dot', x: 320, y: 436, labelX: 352, labelY: 445, labelAnchor: 'start' },
+    { sequence: '-..-', char: 'X', kind: 'dash', x: 220, y: 436, labelX: 188, labelY: 445, labelAnchor: 'end' },
+    { sequence: '-...', char: 'B', kind: 'dot', x: 320, y: 500, labelX: 288, labelY: 509, labelAnchor: 'end' },
+    { sequence: '..-', char: 'U', kind: 'dash', orientation: 'vertical', x: 500, y: 188, labelX: 468, labelY: 197, labelAnchor: 'end' },
+    { sequence: '..-.', char: 'F', kind: 'dot', x: 500, y: 260, labelX: 500, labelY: 300 },
+    { sequence: '...-', char: 'V', kind: 'dash', orientation: 'vertical', x: 570, y: 188, labelX: 602, labelY: 197, labelAnchor: 'start' },
+    { sequence: '.-', char: 'A', kind: 'dash', orientation: 'vertical', x: 430, y: 332, labelX: 398, labelY: 341, labelAnchor: 'end' },
+    { sequence: '.-.', char: 'R', kind: 'dot', x: 500, y: 332, labelX: 500, labelY: 372 },
+    { sequence: '.-..', char: 'L', kind: 'dot', x: 570, y: 332, labelX: 602, labelY: 341, labelAnchor: 'start' },
+    { sequence: '.--', char: 'W', kind: 'dash', orientation: 'vertical', x: 430, y: 436, labelX: 398, labelY: 445, labelAnchor: 'end' },
+    { sequence: '.--.', char: 'P', kind: 'dot', x: 500, y: 436, labelX: 532, labelY: 445, labelAnchor: 'start' },
+    { sequence: '.---', char: 'J', kind: 'dash', orientation: 'vertical', x: 430, y: 500, labelX: 462, labelY: 509, labelAnchor: 'start' }
+];
+const NODE_BY_SEQUENCE = new Map(PLATE_NODES.map(node => [node.sequence, node]));
+function parentPoint(sequence) {
+    if (sequence.length === 1)
+        return ROOT;
+    const parent = NODE_BY_SEQUENCE.get(sequence.slice(0, -1));
+    return parent ? { x: parent.x, y: parent.y } : ROOT;
 }
 export function MorseTree({ sequence, targetSequence = '', showNumbers, language }) {
-    const maxDepth = showNumbers ? 5 : 4;
-    const nodes = buildTree(maxDepth);
     const active = new Set(sequencePrefixes(sequence));
     const target = new Set(sequencePrefixes(targetSequence));
-    const root = { x: WIDTH / 2, y: ROOT_Y };
-    const height = ROOT_Y + maxDepth * LEVEL_GAP + 60;
     return (React.createElement("div", { className: "tree-shell" },
         React.createElement("div", { className: "tree-caption" },
             React.createElement("span", null, t(language, 'treeLegend')),
             React.createElement("span", { className: "tree-scroll-hint" }, "\u2194")),
         React.createElement("div", { className: "tree-scroll", tabIndex: 0 },
-            React.createElement("svg", { className: "morse-tree", viewBox: `0 0 ${WIDTH} ${height}`, role: "img", "aria-label": "Morse code tree" },
-                React.createElement("g", { className: "tree-connectors" }, nodes.map(node => {
-                    const child = nodePoint(node.sequence);
-                    const parentSequence = node.sequence.slice(0, -1);
-                    const parent = parentSequence ? nodePoint(parentSequence) : root;
+            React.createElement("svg", { className: "morse-tree morse-plate", viewBox: `0 0 ${WIDTH} ${HEIGHT}`, role: "img", "aria-label": "Morse code tree" },
+                React.createElement("rect", { className: "plate-background", x: "20", y: "18", width: "720", height: "504", rx: "24" }),
+                React.createElement("text", { x: "210", y: "64", textAnchor: "middle", className: "plate-title" }, "MORSE"),
+                React.createElement("text", { x: "550", y: "64", textAnchor: "middle", className: "plate-title" }, "CODE"),
+                React.createElement("g", { className: "tree-connectors" }, PLATE_NODES.map(node => {
+                    const parent = parentPoint(node.sequence);
                     const isActive = active.has(node.sequence);
                     const isTarget = !isActive && target.has(node.sequence);
-                    return (React.createElement("line", { key: `edge-${node.sequence}`, x1: parent.x, y1: parent.y, x2: child.x, y2: child.y, className: isActive ? 'edge-active' : isTarget ? 'edge-target' : '' }));
+                    return (React.createElement("line", { key: `edge-${node.sequence}`, x1: parent.x, y1: parent.y, x2: node.x, y2: node.y, className: isActive ? `edge-active edge-active-${node.kind}` : isTarget ? 'edge-target' : '' }));
                 })),
-                React.createElement("g", null,
-                    React.createElement("circle", { cx: root.x, cy: root.y, r: "21", className: "tree-root" }),
-                    React.createElement("text", { x: root.x, y: root.y + 4, textAnchor: "middle", className: "tree-root-text" }, t(language, 'start'))),
-                nodes.map(node => {
-                    const p = nodePoint(node.sequence);
+                React.createElement("g", { className: "tree-transmitter", "aria-hidden": "true" },
+                    React.createElement("line", { x1: ROOT.x, y1: "64", x2: ROOT.x, y2: ROOT.y + 4 }),
+                    React.createElement("path", { d: `M${ROOT.x - 28} 70 L${ROOT.x} 98 L${ROOT.x + 28} 70` }),
+                    React.createElement("path", { d: `M${ROOT.x - 16} 70 L${ROOT.x} 86 L${ROOT.x + 16} 70` }),
+                    React.createElement("circle", { cx: ROOT.x, cy: ROOT.y, r: "5" })),
+                PLATE_NODES.map(node => {
                     const isCurrent = sequence === node.sequence;
                     const isActive = active.has(node.sequence);
                     const isTarget = !isActive && target.has(node.sequence);
-                    const char = node.char ?? '';
-                    const symbol = node.sequence.at(-1) === '.' ? '•' : '—';
-                    return (React.createElement("g", { key: node.sequence, className: `tree-node ${isCurrent ? 'current' : ''} ${isActive ? 'active' : ''} ${isTarget ? 'target' : ''}` },
-                        React.createElement("circle", { cx: p.x, cy: p.y, r: node.depth === 5 ? 15 : 18 }),
-                        React.createElement("text", { x: p.x, y: p.y + 5, textAnchor: "middle", className: "node-char" }, char || '·'),
-                        React.createElement("text", { x: p.x, y: p.y - 26, textAnchor: "middle", className: "node-symbol" }, symbol)));
+                    const labelAnchor = node.labelAnchor ?? 'middle';
+                    return (React.createElement("g", { key: node.sequence, className: `tree-node ${node.kind}-node ${isCurrent ? 'current' : ''} ${isActive ? 'active' : ''} ${isTarget ? 'target' : ''}` },
+                        React.createElement("title", null,
+                            node.char,
+                            ": ",
+                            node.sequence),
+                        node.kind === 'dot' ? (React.createElement("circle", { className: "node-shape", cx: node.x, cy: node.y, r: "19" })) : node.orientation === 'vertical' ? (React.createElement("rect", { className: "node-shape", x: node.x - 12, y: node.y - 25, width: "24", height: "50", rx: "5" })) : (React.createElement("rect", { className: "node-shape", x: node.x - 27, y: node.y - 13, width: "54", height: "26", rx: "5" })),
+                        React.createElement("text", { x: node.labelX, y: node.labelY, textAnchor: labelAnchor, className: "node-label" }, node.char)));
                 }))),
         React.createElement("div", { className: "candidate-strip" },
             React.createElement("div", null,
