@@ -136,7 +136,7 @@ main { width: min(1500px, 100%); margin: 0 auto; padding: 18px 22px 48px; }
 .tree-scroll { overflow-x: auto; scrollbar-width: thin; }
 .morse-tree { width: 100%; min-width: 640px; height: auto; display: block; padding: 12px 14px 2px; }
 .plate-background { fill: #101418; stroke: #d7dde3; stroke-width: 3; }
-.plate-title { fill: #b8c4cc; font-size: 38px; font-weight: 500; letter-spacing: .08em; }
+.plate-title { fill: #b8c4cc; font-size: 34px; font-weight: 500; letter-spacing: .08em; }
 .tree-connectors line { stroke: #9daab3; stroke-width: 6; stroke-linecap: round; transition: stroke .15s, stroke-width .15s; }
 .tree-connectors line.edge-target { stroke: #75a7f8; stroke-dasharray: 10 9; }
 .tree-connectors line.edge-active { stroke-width: 8; }
