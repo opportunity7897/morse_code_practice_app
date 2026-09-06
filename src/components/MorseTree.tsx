@@ -29,13 +29,13 @@ interface PlateNode {
 }
 
 const PLATE_NODES: PlateNode[] = [
-  { sequence: '---', char: 'O', kind: 'dash', x: 120, y: 116, labelX: 120, labelY: 82 },
-  { sequence: '--', char: 'M', kind: 'dash', x: 220, y: 116, labelX: 220, labelY: 82 },
-  { sequence: '-', char: 'T', kind: 'dash', x: 320, y: 116, labelX: 320, labelY: 82 },
-  { sequence: '.', char: 'E', kind: 'dot', x: 430, y: 116, labelX: 430, labelY: 82 },
-  { sequence: '..', char: 'I', kind: 'dot', x: 500, y: 116, labelX: 500, labelY: 82 },
-  { sequence: '...', char: 'S', kind: 'dot', x: 570, y: 116, labelX: 570, labelY: 82 },
-  { sequence: '....', char: 'H', kind: 'dot', x: 640, y: 116, labelX: 640, labelY: 82 },
+  { sequence: '---', char: 'O', kind: 'dash', x: 120, y: 116, labelX: 120, labelY: 94 },
+  { sequence: '--', char: 'M', kind: 'dash', x: 220, y: 116, labelX: 220, labelY: 94 },
+  { sequence: '-', char: 'T', kind: 'dash', x: 320, y: 116, labelX: 320, labelY: 94 },
+  { sequence: '.', char: 'E', kind: 'dot', x: 430, y: 116, labelX: 430, labelY: 94 },
+  { sequence: '..', char: 'I', kind: 'dot', x: 500, y: 116, labelX: 500, labelY: 94 },
+  { sequence: '...', char: 'S', kind: 'dot', x: 570, y: 116, labelX: 570, labelY: 94 },
+  { sequence: '....', char: 'H', kind: 'dot', x: 640, y: 116, labelX: 640, labelY: 94 },
 
   { sequence: '--.', char: 'G', kind: 'dot', x: 220, y: 188, labelX: 252, labelY: 197, labelAnchor: 'start' },
   { sequence: '--.-', char: 'Q', kind: 'dash', x: 120, y: 188, labelX: 120, labelY: 228 },
@@ -82,8 +82,8 @@ export function MorseTree({ sequence, targetSequence = '', showNumbers, language
       <div className="tree-scroll" tabIndex={0}>
         <svg className="morse-tree morse-plate" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Morse code tree">
           <rect className="plate-background" x="20" y="18" width="720" height="504" rx="24" />
-          <text x="210" y="64" textAnchor="middle" className="plate-title">MORSE</text>
-          <text x="550" y="64" textAnchor="middle" className="plate-title">CODE</text>
+          <text x="210" y="60" textAnchor="middle" className="plate-title">MORSE</text>
+          <text x="550" y="60" textAnchor="middle" className="plate-title">CODE</text>
           <g className="tree-connectors">
             {PLATE_NODES.map(node => {
               const parent = parentPoint(node.sequence);

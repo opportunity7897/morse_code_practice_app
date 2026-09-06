@@ -4,13 +4,13 @@ const WIDTH = 760;
 const HEIGHT = 540;
 const ROOT = { x: 380, y: 116 };
 const PLATE_NODES = [
-    { sequence: '---', char: 'O', kind: 'dash', x: 120, y: 116, labelX: 120, labelY: 82 },
-    { sequence: '--', char: 'M', kind: 'dash', x: 220, y: 116, labelX: 220, labelY: 82 },
-    { sequence: '-', char: 'T', kind: 'dash', x: 320, y: 116, labelX: 320, labelY: 82 },
-    { sequence: '.', char: 'E', kind: 'dot', x: 430, y: 116, labelX: 430, labelY: 82 },
-    { sequence: '..', char: 'I', kind: 'dot', x: 500, y: 116, labelX: 500, labelY: 82 },
-    { sequence: '...', char: 'S', kind: 'dot', x: 570, y: 116, labelX: 570, labelY: 82 },
-    { sequence: '....', char: 'H', kind: 'dot', x: 640, y: 116, labelX: 640, labelY: 82 },
+    { sequence: '---', char: 'O', kind: 'dash', x: 120, y: 116, labelX: 120, labelY: 94 },
+    { sequence: '--', char: 'M', kind: 'dash', x: 220, y: 116, labelX: 220, labelY: 94 },
+    { sequence: '-', char: 'T', kind: 'dash', x: 320, y: 116, labelX: 320, labelY: 94 },
+    { sequence: '.', char: 'E', kind: 'dot', x: 430, y: 116, labelX: 430, labelY: 94 },
+    { sequence: '..', char: 'I', kind: 'dot', x: 500, y: 116, labelX: 500, labelY: 94 },
+    { sequence: '...', char: 'S', kind: 'dot', x: 570, y: 116, labelX: 570, labelY: 94 },
+    { sequence: '....', char: 'H', kind: 'dot', x: 640, y: 116, labelX: 640, labelY: 94 },
     { sequence: '--.', char: 'G', kind: 'dot', x: 220, y: 188, labelX: 252, labelY: 197, labelAnchor: 'start' },
     { sequence: '--.-', char: 'Q', kind: 'dash', x: 120, y: 188, labelX: 120, labelY: 228 },
     { sequence: '--..', char: 'Z', kind: 'dot', x: 220, y: 260, labelX: 252, labelY: 269, labelAnchor: 'start' },
@@ -48,8 +48,8 @@ export function MorseTree({ sequence, targetSequence = '', showNumbers, language
         React.createElement("div", { className: "tree-scroll", tabIndex: 0 },
             React.createElement("svg", { className: "morse-tree morse-plate", viewBox: `0 0 ${WIDTH} ${HEIGHT}`, role: "img", "aria-label": "Morse code tree" },
                 React.createElement("rect", { className: "plate-background", x: "20", y: "18", width: "720", height: "504", rx: "24" }),
-                React.createElement("text", { x: "210", y: "64", textAnchor: "middle", className: "plate-title" }, "MORSE"),
-                React.createElement("text", { x: "550", y: "64", textAnchor: "middle", className: "plate-title" }, "CODE"),
+                React.createElement("text", { x: "210", y: "60", textAnchor: "middle", className: "plate-title" }, "MORSE"),
+                React.createElement("text", { x: "550", y: "60", textAnchor: "middle", className: "plate-title" }, "CODE"),
                 React.createElement("g", { className: "tree-connectors" }, PLATE_NODES.map(node => {
                     const parent = parentPoint(node.sequence);
                     const isActive = active.has(node.sequence);
