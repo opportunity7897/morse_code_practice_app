@@ -1,4 +1,5 @@
 import { AudioEngine } from './audio/audio-engine.js';
+import { ExternalKeyerPanel } from './components/ExternalKeyerPanel.js';
 import { Keyer } from './components/Keyer.js';
 import { ModeTabs } from './components/ModeTabs.js';
 import { MorseTree } from './components/MorseTree.js';
@@ -281,7 +282,9 @@ export function App() {
                                 " ",
                                 t(language, 'ms')))),
                     React.createElement(MorseTree, { sequence: sequence, targetSequence: targetTreeSequence, showNumbers: settings.includeNumbers, codeSet: codeSet, language: language }),
-                    mode === 'listening' ? (React.createElement(ListeningAnswers, { language: language, codeSet: codeSet, includeNumbers: settings.includeNumbers, enabled: listeningPlayed, onAnswer: submitListening })) : (React.createElement(Keyer, { language: language, pressed: pressed, pressDuration: pressDuration, thresholdMs: thresholdMs, onPressStart: beginPress, onPressEnd: endPress, onDot: () => appendSymbol('.'), onDash: () => appendSymbol('-'), onCommit: commitSequence, onUndo: undoSymbol, onClear: clearInput })),
+                    mode === 'listening' ? (React.createElement(ListeningAnswers, { language: language, codeSet: codeSet, includeNumbers: settings.includeNumbers, enabled: listeningPlayed, onAnswer: submitListening })) : (React.createElement(React.Fragment, null,
+                        React.createElement(Keyer, { language: language, pressed: pressed, pressDuration: pressDuration, thresholdMs: thresholdMs, onPressStart: beginPress, onPressEnd: endPress, onDot: () => appendSymbol('.'), onDash: () => appendSymbol('-'), onCommit: commitSequence, onUndo: undoSymbol, onClear: clearInput }),
+                        React.createElement(ExternalKeyerPanel, { language: language, onPressStart: beginPress, onPressEnd: endPress, onDot: () => appendSymbol('.'), onDash: () => appendSymbol('-'), onCommit: commitSequence, onUndo: undoSymbol }))),
                     mode === 'free' && (React.createElement("section", { className: "transcript-card" },
                         React.createElement("div", { className: "transcript-heading" },
                             React.createElement("span", null, t(language, 'transcript')),
