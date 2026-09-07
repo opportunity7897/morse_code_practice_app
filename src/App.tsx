@@ -1,4 +1,5 @@
 import { AudioEngine } from './audio/audio-engine.js';
+import { ExternalKeyerPanel } from './components/ExternalKeyerPanel.js';
 import { Keyer } from './components/Keyer.js';
 import { ModeTabs, type PracticeMode } from './components/ModeTabs.js';
 import { MorseTree } from './components/MorseTree.js';
@@ -293,19 +294,30 @@ export function App() {
             {mode === 'listening' ? (
               <ListeningAnswers language={language} codeSet={codeSet} includeNumbers={settings.includeNumbers} enabled={listeningPlayed} onAnswer={submitListening} />
             ) : (
-              <Keyer
-                language={language}
-                pressed={pressed}
-                pressDuration={pressDuration}
-                thresholdMs={thresholdMs}
-                onPressStart={beginPress}
-                onPressEnd={endPress}
-                onDot={() => appendSymbol('.')}
-                onDash={() => appendSymbol('-')}
-                onCommit={commitSequence}
-                onUndo={undoSymbol}
-                onClear={clearInput}
-              />
+              <>
+                <Keyer
+                  language={language}
+                  pressed={pressed}
+                  pressDuration={pressDuration}
+                  thresholdMs={thresholdMs}
+                  onPressStart={beginPress}
+                  onPressEnd={endPress}
+                  onDot={() => appendSymbol('.')}
+                  onDash={() => appendSymbol('-')}
+                  onCommit={commitSequence}
+                  onUndo={undoSymbol}
+                  onClear={clearInput}
+                />
+                <ExternalKeyerPanel
+                  language={language}
+                  onPressStart={beginPress}
+                  onPressEnd={endPress}
+                  onDot={() => appendSymbol('.')}
+                  onDash={() => appendSymbol('-')}
+                  onCommit={commitSequence}
+                  onUndo={undoSymbol}
+                />
+              </>
             )}
 
             {mode === 'free' && (
